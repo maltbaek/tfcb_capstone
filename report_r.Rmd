@@ -1,0 +1,212 @@
+---
+title: "Immunoprofiling of adenocarcinomas of the pancreatobiliary system"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Brief overview of project.
+
+## About the data
+
+These data represent student enrollment in 200 different courses throughout ten years.
+Here is some extra information about the assumptions I made when analyzing these data,
+as well as information about what would've improved my ability to use it.
+
+## Question 1: Can we tidy the data by both analyzing the missing data and imputing it, and otherwise creating a new tidy dataset and updated .csv?
+
+There are a significant number of missing or unknown cells in the dataset...etc
+
+Import required packages
+```{r}
+
+library(plyr)
+library(impute)
+library(tidyverse)
+BiocManager::install("impute")
+
+```
+
+Import raw dataset
+```{r}
+pcbilDataRaw <- read.csv(file = "C:/Users/jmalt/Desktop/tfcb_capstone/data/pcbil_raw.csv", row.names = 39, colClasses= c(rep("numeric",38), rep("character",2)), na.strings = "?",quote="'" )
+
+# create working dataset for processing
+pcbilDataWork <- pcbilDataRaw
+
+# process column names
+
+names(pcbilDataWork) <- tolower(names(pcbilDataWork))
+names(pcbilDataWork)[39] <- "clin_diag"
+pcbilDataWork$clin_diag <- as.factor(pcbilDataWork$clin_diag)
+
+```
+
+As they do in the paper, recode clinical diagnoses according to AJCC/IUCC-TNM 7 nomenclature
+```{r}
+revalue(pcbilDataWork$clin_diag, c("Ampulla Ac" = "Ampullary carcinoma")) -> pcbilDataWork$clin_diag
+revalue(pcbilDataWork$clin_diag, c("Distal Bile Duct Ac" = "Distal bile duct cancer")) -> pcbilDataWork$clin_diag
+revalue(pcbilDataWork$clin_diag, c("Gallbladder Ac" = "Gallbladder cancer")) -> pcbilDataWork$clin_diag
+revalue(pcbilDataWork$clin_diag, c("Hepatocellular Cancer" = "Hepatocellular carcinoma")) -> pcbilDataWork$clin_diag
+revalue(pcbilDataWork$clin_diag, c("Intrahepatic Cholangiocarcinoma" = "Intrahepatic cholangiocarcinoma")) -> pcbilDataWork$clin_diag
+revalue(pcbilDataWork$clin_diag, c("Pancreas Ac" = "Ductal pancreatic adenocarcinoma")) -> pcbilDataWork$clin_diag
+revalue(pcbilDataWork$clin_diag, c("Perihilary Ac" = "Perihilar cholangiocarcinoma")) -> pcbilDataWork$clin_diag
+```
+
+
+Take a look at the composition of the raw dataset:
+```{r}
+#Total number of tumor samples
+dim(pcbilDataWork)[1]
+
+#Total number of markers
+dim(pcbilDataWork)[2]
+
+#List of markers
+names(pcbilDataWork)
+```
+
+
+Composition of the raw dataset by atanomical-based diagnosis
+```{r}
+# first, as they do in the paper, fix one incorrect anatomical-based diagnosis:
+pcbilDataWork[rownames(pcbilDataWork) == "Intrahepatic Cholangiocarcinoma|366" , "clin_diag"] <- "Gallbladder cancer"
+
+# then look at the table:
+table(pcbilDataWork$clin_diag)
+```
+
+Summary of missing values by marker
+```{r}
+propmiss <- function(dataframe) {
+  m <- sapply(dataframe, function(x) {
+  	data.frame(
+			nmiss=sum(is.na(x)), 
+			n=length(x), 
+			propmiss=round(sum(is.na(x))/length(x),2)
+		)
+	})
+	d <- data.frame(t(m))
+	d <- sapply(d, unlist)
+	d <- as.data.frame(d)
+	d$variable <- row.names(d)
+	row.names(d) <- NULL
+	d <- cbind(d[ncol(d)],d[-ncol(d)])
+	return(d[order(d$propmiss), ])
+}
+
+reportmiss <- function(dataframe) {
+  propMiss <- propmiss(dataframe)
+  print(propMiss)
+  totalNumValues <- dim(dataframe)[1] * (dim(dataframe)[2] - 1)
+  totalMissingValues <- sum(propMiss$nmiss)
+  return ( (100 / totalNumValues) * totalMissingValues  )
+}
+
+pcbilDataWorkMissingValues <- reportmiss(pcbilDataWork)
+
+#Total percentage of missing data in processed dataset (%):
+round(pcbilDataWorkMissingValues, 0)
+```
+
+Summary of missing values by tumor sample
+```{r}
+reportmissperrow <- function(dataframe) {
+
+  pads <- c()
+  numMissingValues <- c()
+  propMissingValues <- c()
+  
+  aRow <- 1
+  while(aRow <= nrow(dataframe)) {
+    pads <- c(pads, row.names(dataframe)[aRow])
+    numMissing <- sum(is.na(dataframe[aRow,]))
+    propMissingValues <- c(propMissingValues, round((100 / (dim(dataframe)[2] -1)) *numMissing,2))
+  	numMissingValues <- c(numMissingValues, numMissing)
+  	aRow <- aRow + 1
+  }
+  missingD <- data.frame(pad = pads, nmissing = numMissingValues, propmissing = propMissingValues, stringsAsFactors=F)
+  missingD$propmiss_interv <- cut(missingD$propmissing, c(0,10,20,30,40,50,60,70,80,90,100))
+  
+  print(table(missingD$propmiss_interv))
+  
+  return (subset(missingD, propmissing > 50)[, 1])
+}
+
+numCasesMissGreat50 <- reportmissperrow(pcbilDataWork)
+#Number of cases in work dataset with more than 50% missing data:
+length(numCasesMissGreat50)
+```
+
+The original paper removes markers with > 40% missing values (as determined by the output above, under "Summary of missing values by marker"):
+ttf1, cd146, cd146_nucl, ngfr_str, calretinin, glypican_3, ezh2, synap, hbme1, mesothelin, hepatocyte
+```{r}
+pcbilDataMarkerTrimmed <- subset(pcbilDataWork, select=-c(ttf1, cd146, cd146_nucl, ngfr_str, calretinin, glypican_3, ezh2, synap, hbme1, mesothelin, hepatocyte))
+
+pcbilDataMarkerTrimmedMissingValues <- reportmiss(pcbilDataMarkerTrimmed)
+
+```
+
+
+Missing values in marker trimmed dataset, by tumor sample
+```{r}
+samplesWithMissingGreater50 <- reportmissperrow(pcbilDataMarkerTrimmed)
+#Number of cases in filtered dataset with more than 50% missing data:
+length(samplesWithMissingGreater50)
+print(samplesWithMissingGreater50)
+
+```
+
+Next, as in the original paper, we remove tumor samples with > 50% missing values
+```{r}
+pcbilDataMarkerSamplesTrimmed <- pcbilDataMarkerTrimmed[!rownames(pcbilDataMarkerTrimmed) %in% samplesWithMissingGreater50, ]
+
+pcbilDataMarkerTrimmedMissingValues <- reportmiss(pcbilDataMarkerSamplesTrimmed)
+
+reportmissperrow(pcbilDataMarkerSamplesTrimmed)
+
+```
+
+
+Next the paper imputes the missing values using KNN-based imputation:
+```{r}
+pcbilMatrixImputed <- impute.knn(as.matrix(pcbilDataMarkerSamplesTrimmed[1:27]))
+pcbilDataImputed <- as.data.frame(pcbilMatrixImputed$data)
+pcbilDataImputed$clin_diag <- pcbilDataMarkerSamplesTrimmed$clin_diag
+
+# check the result:
+
+pcbilDataImputedMissingValues <-reportmiss(pcbilDataImputed)
+
+```
+
+Finally we save the imputed, tidy dataset:
+```{r}
+pcbilDataImputed$pad <- rownames(pcbilDataImputed)
+write.csv(pcbilDataImputed, 'data/pcbilDataImputed.csv', row.names=F, na="")
+```
+
+
+
+## What is the average enrollment in the largest 10 classes across ten years?
+
+Brief introduction to the question and why it's important
+
+```{r}
+# data parsing and manipulation
+```
+
+Explanation of data filtering
+
+```{r}
+# data visualization
+```
+
+Interpretation of results, answering question
+
+## Reproducibility
+
+This section includes comments on the ease of reproducibility of my analysis and the analysis in the original paper, 
+which reflects on the concepts covered in the first few weeks of class.
