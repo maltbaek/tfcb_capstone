@@ -9,9 +9,8 @@
 Here are the two figures you will find in this directory.
 
 This is the answer to question 2:
-
-![](figures/question2.png)
+![](figures/question2)
 
 This is the answer to question 3:
 
-![](figures/question3.png)
+![](figures/question3)
