@@ -193,8 +193,9 @@ pcbilDataImputed$pad <- rownames(pcbilDataImputed)
 write.csv(pcbilDataImputed, 'data/pcbilDataImputed.csv', row.names=F, na="")
 ```
 
+## Question 1 Results
 
-Interpretation of results, answering question
+We succesfully created a new, tidy dataset and saved it as a new .csv file in our '/data' directory. This new file, '/data.pcbilDataImputed', can be used for further analysis, as it doesn't have any missing data (the data were imputed as described above). Furthermore, using the guidance from the original published study, we refined the dataset and only included well-represented tumor samples that had sufficient marker staining intensities. 
 
 ## Question 2: Of the 5 markers with the highest average staining intensity, which tumor type has the highest average staining intensity for each one?
 
@@ -286,7 +287,9 @@ p +geom_bar(stat = "identity", aes(fill = Tumor), position = "dodge", width = 0.
   theme(aspect.ratio=4/7)
 
 ```
+## Question 2 Results
 
+We succesfully generated a bar plot to analyze how the 5 most intense staining markers look across each represented tumor type. The results suggest that each of the 5 most intense staining markers are strongly expressed in each of the test tumor types. The control tumor samples, hepatocellular carcinoma, do not have a high mean staining for the 5 markers selected. This tells us that they may stand out from the rest of the test samples in subsequent analyses, but this is ok because they are the control group. 
 
 ## Reproducibility
 
