@@ -30,7 +30,9 @@ For my analysis in this repo, the following files are included (start with 'repo
 Here are the figures you will find in this repo.
 
 Fig 1 (answer to question 2):
+
 ![](/figures/question2.png)
 
 Fig 2 (answer to question 3):
+
 ![](/figures/question3.png)
