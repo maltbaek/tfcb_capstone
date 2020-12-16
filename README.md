@@ -2,6 +2,8 @@
 
 ## by Joanna Maltbaek
 
+This repository is my final project for TFCB 2020. It includes an analysis of immunohistochemical typing of adenocarcinomas that arise in the pancreatobiliary system.
+
 ## In this repo, you will find:
 
 # Data
