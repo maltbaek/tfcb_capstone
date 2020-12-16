@@ -1,6 +1,6 @@
 # tfcb_capstone
 
-**Joanna Maltbaek
+## by Joanna Maltbaek
 
 ## In this repo, you will find:
 
