@@ -1,9 +1,9 @@
 # tfcb_capstone: Figures
  
-Directory structure and files:
+# Directory structure and files:
 	README - Explanation of figures/ content
-	question2.png: Figure generated from r_report.Rmd; answer to Question 2
-	question3.png: Figure generated from r_python.ipynb; answer to Question 3
+	question2.png: result from Question 2, generated in R studio
+	question3.png: result from Question 3, generated in python
 
 # Figures
 Here are the two figures you will find in this directory.
