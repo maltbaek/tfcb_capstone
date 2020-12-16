@@ -7,13 +7,12 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Brief overview of project.
-
 ## About the data
 
-These data represent student enrollment in 200 different courses throughout ten years.
-Here is some extra information about the assumptions I made when analyzing these data,
-as well as information about what would've improved my ability to use it.
+These data represent a retrospective observational cohort study. The patient samples include patients who were diagnosed with adenocarcinoma arising in the pancreatobiliary system in Huddinge, Sweden. Tumor samples of hepatocellular carcinoma, a tumor type with a well-known immunohistochemical profile, were included as a control group for the results. 
+
+I made some assumptions when analyzing these data. I assumed that the data on patient diagnosis were correct, and that they were collected and staged accordingly. I also assumed that the standards set by the authors (removing antibody markers with more than 40% missing values and removing tumor samples with more than 50% missing values) were logcially sound, as I did not change these parameters when tidying the data myself. Finally, I assumed that the tumor samples included in this study represent a normal distribution of data, with adequate sample size and equality of variance in standard deviation.
+
 
 ## Question 1: Are the staining markers well accounted for across the dataset? Can we create a new, tidy data frame for the immunohistochemical markers and tumor samples?
 
@@ -31,6 +30,8 @@ BiocManager::install("impute")
 
 Import raw dataset
 ```{r}
+#read the raw data into a new variable
+
 pcbilDataRaw <- read.csv(file = "C:/Users/jmalt/Desktop/tfcb_capstone/data/pcbil_raw.csv", row.names = 39, colClasses= c(rep("numeric",38), rep("character",2)), na.strings = "?",quote="'" )
 
 # create working dataset for processing
@@ -46,6 +47,7 @@ pcbilDataWork$clin_diag <- as.factor(pcbilDataWork$clin_diag)
 
 As they do in the paper, recode clinical diagnoses according to AJCC/IUCC-TNM 7 nomenclature, which is part of our tidying the data:
 ```{r}
+# here I took cues from the paper to fix some diagnostic names
 revalue(pcbilDataWork$clin_diag, c("Ampulla Ac" = "Ampullary carcinoma")) -> pcbilDataWork$clin_diag
 revalue(pcbilDataWork$clin_diag, c("Distal Bile Duct Ac" = "Distal bile duct cancer")) -> pcbilDataWork$clin_diag
 revalue(pcbilDataWork$clin_diag, c("Gallbladder Ac" = "Gallbladder cancer")) -> pcbilDataWork$clin_diag
@@ -80,6 +82,7 @@ table(pcbilDataWork$clin_diag)
 
 Summary of missing values by marker:
 ```{r}
+# create a new variable to assess the extent of missing values
 propmiss <- function(dataframe) {
   m <- sapply(dataframe, function(x) {
   	data.frame(
@@ -113,6 +116,8 @@ round(pcbilDataWorkMissingValues, 0)
 
 Summary of missing values by tumor sample
 ```{r}
+# as the above data show, look at the missing values according to tumor types
+
 reportmissperrow <- function(dataframe) {
 
   pads <- c()
@@ -196,6 +201,8 @@ Interpretation of results, answering question
 ```{r}
 library(dplyr)
 
+#read the new imputed tidy dataset into a new variable
+
 pcbilDataImputed <- read.csv(file = "C:/Users/jmalt/Desktop/tfcb_capstone/data/pcbilDataImputed.csv")
 
 df <- subset(pcbilDataImputed, select = -c(pad,clin_diag)) %>%
@@ -210,23 +217,31 @@ names(df)
 
 ```{r}
 
+# calculate the mean intensity of each marker
+
 col_avg <- colMeans(df) %>%
   as.data.frame() %>%
   print()
 ```
 
 ```{r}
+# create a new dataframe with the average intesities of each marker
+
 df_col_avg <- data.frame(marker=c('ck5','ck7','ck17','ck18','ck19','ck20','vim','muc1','muc2','muc5ac','muc6','berep4','ema','mcea','pcea','ca125','ca19.9','maspin','wt1cyt','cdx2','p53','p63','ki67','smad4','chra','cd56','cd10'), avg_intensity=c(4.0118465,65.2483700,19.6879293,89.9241933,76.1899959,10.0508693,19.8194954,49.1249830,3.2207426,29.9493465,9.7273863,63.6890499,72.1461365,29.9998545,73.1693469,29.0709046,53.9108162,48.0657915,7.6755225,14.4455777,30.9228179,2.8586118,33.8746895,60.1012852,0.9427465,4.5393405,12.0211105))
 ```
 
 
 ```{r}
+# find the 5 markers with highest average staining intensity
+
 df_col_avg_sorted_asc <- df_col_avg[order(-df_col_avg$avg_intensity),] %>%
   head(,5) %>%
   print()
 
 ```
 ```{r}
+# calculate the mean of each of the 5 previous markers for each separeate tumor type
+
 df_refined <- pcbilDataImputed%>%
   select(ck18, ck19, pcea, ema, ck7, clin_diag)%>%
   group_by(clin_diag) %>%
@@ -241,6 +256,8 @@ results <- as.data.frame(df_refined)%>%
 
 ```{r}
 # help with this section from: https://www.r-bloggers.com/2016/11/make-a-bar-plot-with-ggplot/
+
+# make a new variable that has the info above, ready to graph with ggplot2
 
 marker <-rep(c("ck18", "ck19", "pcea", "ema", "ck7"), 7)
 Ampullary_carcinoma <-c(90.25236, 91.97917, 78.31481, 84.40104, 59.09375)
@@ -257,6 +274,8 @@ results_graph <- data.frame(marker, values)
 ```
 
 ```{r}
+# use ggplot to graph results
+
 library(ggplot2)
 
 p <-ggplot(results_graph, aes(marker, values))
@@ -271,5 +290,4 @@ p +geom_bar(stat = "identity", aes(fill = Tumor), position = "dodge", width = 0.
 
 ## Reproducibility
 
-This section includes comments on the ease of reproducibility of my analysis and the analysis in the original paper, 
-which reflects on the concepts covered in the first few weeks of class.
+The analysis in the original paper, at least in terms of "tidying" the data, was relatively easy to reproduce. It was easy to understand the workflow in R, especially when it came to pruning the data set according to their standards (ie. removing antibody markers with more than 40% missing values and tumor samples with more than 50% missing values). The original paper however only provided the raw data file, and not the tidy data, so I have to assume that I worked through their analysis correctly. Ultimately, I am satisfied with my tidy data file ('data/pcbilDataImputed.csv'). I have included code comments to help a prospective user work through my own analysis, including through Question 2. I will document the structure of this repo in the README file in github (as well as README files in each subsequent directory), so that others can reliably reproduce this analysis. 
