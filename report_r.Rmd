@@ -15,9 +15,9 @@ These data represent student enrollment in 200 different courses throughout ten 
 Here is some extra information about the assumptions I made when analyzing these data,
 as well as information about what would've improved my ability to use it.
 
-## Question 1: Can we tidy the data by both analyzing the missing data and imputing it, and otherwise creating a new tidy dataset and updated .csv?
+## Question 1: Are the staining markers well accounted for across the dataset? Can we create a new, tidy data frame for the immunohistochemical markers and tumor samples?
 
-There are a significant number of missing or unknown cells in the dataset...etc
+As in the paper, we will clean up the data by removing antibody markers (out of the initial 38) with more than 40% missing values as well as tumor samples with more than 50% missing values. We will also investigate if there are a significant number of missing or unknown cells, in which case we will impute these data. We will create this new tidy dataset as a new .csv file to include in our data folder and use for further analysis of future questions.
 
 Import required packages
 ```{r}
@@ -44,7 +44,7 @@ pcbilDataWork$clin_diag <- as.factor(pcbilDataWork$clin_diag)
 
 ```
 
-As they do in the paper, recode clinical diagnoses according to AJCC/IUCC-TNM 7 nomenclature
+As they do in the paper, recode clinical diagnoses according to AJCC/IUCC-TNM 7 nomenclature, which is part of our tidying the data:
 ```{r}
 revalue(pcbilDataWork$clin_diag, c("Ampulla Ac" = "Ampullary carcinoma")) -> pcbilDataWork$clin_diag
 revalue(pcbilDataWork$clin_diag, c("Distal Bile Duct Ac" = "Distal bile duct cancer")) -> pcbilDataWork$clin_diag
@@ -69,7 +69,7 @@ names(pcbilDataWork)
 ```
 
 
-Composition of the raw dataset by atanomical-based diagnosis
+Composition of the raw dataset by atanomical-based diagnosis:
 ```{r}
 # first, as they do in the paper, fix one incorrect anatomical-based diagnosis:
 pcbilDataWork[rownames(pcbilDataWork) == "Intrahepatic Cholangiocarcinoma|366" , "clin_diag"] <- "Gallbladder cancer"
@@ -78,7 +78,7 @@ pcbilDataWork[rownames(pcbilDataWork) == "Intrahepatic Cholangiocarcinoma|366" ,
 table(pcbilDataWork$clin_diag)
 ```
 
-Summary of missing values by marker
+Summary of missing values by marker:
 ```{r}
 propmiss <- function(dataframe) {
   m <- sapply(dataframe, function(x) {
@@ -140,7 +140,7 @@ numCasesMissGreat50 <- reportmissperrow(pcbilDataWork)
 length(numCasesMissGreat50)
 ```
 
-The original paper removes markers with > 40% missing values (as determined by the output above, under "Summary of missing values by marker"):
+The original paper removes markers with > 40% missing values (as determined by the output above, under "Summary of missing values by marker") and these are:
 ttf1, cd146, cd146_nucl, ngfr_str, calretinin, glypican_3, ezh2, synap, hbme1, mesothelin, hepatocyte
 ```{r}
 pcbilDataMarkerTrimmed <- subset(pcbilDataWork, select=-c(ttf1, cd146, cd146_nucl, ngfr_str, calretinin, glypican_3, ezh2, synap, hbme1, mesothelin, hepatocyte))
@@ -150,7 +150,7 @@ pcbilDataMarkerTrimmedMissingValues <- reportmiss(pcbilDataMarkerTrimmed)
 ```
 
 
-Missing values in marker trimmed dataset, by tumor sample
+Missing values in marker trimmed dataset, by tumor sample:
 ```{r}
 samplesWithMissingGreater50 <- reportmissperrow(pcbilDataMarkerTrimmed)
 #Number of cases in filtered dataset with more than 50% missing data:
@@ -159,7 +159,7 @@ print(samplesWithMissingGreater50)
 
 ```
 
-Next, as in the original paper, we remove tumor samples with > 50% missing values
+Next, as in the original paper, we remove tumor samples with > 50% missing values:
 ```{r}
 pcbilDataMarkerSamplesTrimmed <- pcbilDataMarkerTrimmed[!rownames(pcbilDataMarkerTrimmed) %in% samplesWithMissingGreater50, ]
 
@@ -189,22 +189,85 @@ write.csv(pcbilDataImputed, 'data/pcbilDataImputed.csv', row.names=F, na="")
 ```
 
 
-
-## What is the average enrollment in the largest 10 classes across ten years?
-
-Brief introduction to the question and why it's important
-
-```{r}
-# data parsing and manipulation
-```
-
-Explanation of data filtering
-
-```{r}
-# data visualization
-```
-
 Interpretation of results, answering question
+
+## Question 2: Of the 5 markers with the highest average staining intensity, which tumor type has the highest average staining intensity for each one?
+
+```{r}
+library(dplyr)
+
+pcbilDataImputed <- read.csv(file = "C:/Users/jmalt/Desktop/tfcb_capstone/data/pcbilDataImputed.csv")
+
+df <- subset(pcbilDataImputed, select = -c(pad,clin_diag)) %>%
+  print()
+
+
+```
+```{r}
+names(df)
+```
+
+
+```{r}
+
+col_avg <- colMeans(df) %>%
+  as.data.frame() %>%
+  print()
+```
+
+```{r}
+df_col_avg <- data.frame(marker=c('ck5','ck7','ck17','ck18','ck19','ck20','vim','muc1','muc2','muc5ac','muc6','berep4','ema','mcea','pcea','ca125','ca19.9','maspin','wt1cyt','cdx2','p53','p63','ki67','smad4','chra','cd56','cd10'), avg_intensity=c(4.0118465,65.2483700,19.6879293,89.9241933,76.1899959,10.0508693,19.8194954,49.1249830,3.2207426,29.9493465,9.7273863,63.6890499,72.1461365,29.9998545,73.1693469,29.0709046,53.9108162,48.0657915,7.6755225,14.4455777,30.9228179,2.8586118,33.8746895,60.1012852,0.9427465,4.5393405,12.0211105))
+```
+
+
+```{r}
+df_col_avg_sorted_asc <- df_col_avg[order(-df_col_avg$avg_intensity),] %>%
+  head(,5) %>%
+  print()
+
+```
+```{r}
+df_refined <- pcbilDataImputed%>%
+  select(ck18, ck19, pcea, ema, ck7, clin_diag)%>%
+  group_by(clin_diag) %>%
+  summarise_at(1:5, ~ round(mean(.), 5))%>%
+  print()
+```
+
+```{r}
+results <- as.data.frame(df_refined)%>%
+  print()
+```
+
+```{r}
+# help with this section from: https://www.r-bloggers.com/2016/11/make-a-bar-plot-with-ggplot/
+
+marker <-rep(c("ck18", "ck19", "pcea", "ema", "ck7"), 7)
+Ampullary_carcinoma <-c(90.25236, 91.97917, 78.31481, 84.40104, 59.09375)
+Distal_bile_duct_cancer <-c(81.42857, 92.50000, 89.08730, 92.50000, 81.78571)
+Ductal_pancreatic_adenocarcinoma <-c(90.73342, 91.73291, 85.47480, 89.98884, 82.25719)
+Gallbladder_cancer <-c(91.94726, 90.09760, 74.86149, 83.88983, 75.57432)
+Hepatocellular_carcinoma <-c(87.87500, 12.13746, 45.37776, 17.00627,  9.23718)
+Intrahepatic_cholangiocarcinoma <-c(89.70511, 90.52062, 72.67535, 80.36352, 81.06529)
+Perihilar_cholangiocarcinoma <-c(91.60365, 92.40741, 80.86111, 77.79707, 69.70370)
+values <-c(Ampullary_carcinoma, Distal_bile_duct_cancer, Ductal_pancreatic_adenocarcinoma, Gallbladder_cancer, Hepatocellular_carcinoma, Intrahepatic_cholangiocarcinoma, Perihilar_cholangiocarcinoma)
+Tumor <-c(rep("Ampullary carcinoma", 5), rep("Distal bile duct cancer", 5), rep("Ductal pancreatic adenocarcinoma",5), rep("Gallbladder cancer", 5), rep("Hepatocellular carcinoma", 5), rep("Intrahepatic cholangiocarcinoma", 5), rep("Perihilar cholangiocarcinoma", 5))
+results_graph <- data.frame(marker, values)
+
+```
+
+```{r}
+library(ggplot2)
+
+p <-ggplot(results_graph, aes(marker, values))
+p +geom_bar(stat = "identity", aes(fill = Tumor), position = "dodge", width = 0.8) +
+  xlab("Marker") + ylab("Staining intensity") +
+  ggtitle("Immunohistochemistry of strongest markers in PCBIL") +
+  theme_bw() +
+  theme(aspect.ratio=4/7)
+
+```
+
 
 ## Reproducibility
 
