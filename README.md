@@ -2,9 +2,7 @@
 
 The data for this repo is sourced from [here](https://datadryad.org/stash/dataset/doi:10.5061/dryad.g8h71).
 
-These data are used in the following published paper: 
-
-[this published study](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0166067#pone.0166067.s001).
+These data are used in the following published paper: [this published study](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0166067#pone.0166067.s001).
 
 For my analysis in this repo, the following files are included (start with 'report_r.Rmd' for explanation of dataset and analysis):
 
